@@ -1,0 +1,10 @@
+Package: xiaRToolkit
+Title: The toolkit for Xiaokai Xia's work in Rlang
+Version: 0.0.0.9000
+Authors@R:
+    person("Xia", "Xiaokai", , "xia@xiaokai.me", role = c("aut", "cre"))
+Description: What the package does (one paragraph).
+License: `use_mit_license()`
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
