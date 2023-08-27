@@ -2,7 +2,6 @@ library(tidyverse)
 library(magrittr)
 library(rstatix)
 library(ggplot2)
-library(apaTables)
 
 #' calc_within_anova
 #'
@@ -23,9 +22,10 @@ calc_within_anova <- function(input_data,
                               within = "subject_num",
                               factors,
                               dep = "RT",
-                              type = 2,
+                              type = 3,
                               generate_report = FALSE,
                               report_path = NULL,
+                              print_desc_report = TRUE,
                               debug = FALSE) {
     grouping_columns <- c(within, factors)
 
@@ -43,9 +43,6 @@ calc_within_anova <- function(input_data,
     formula <- as.formula(paste("mean_rt ~ ", paste(factors, collapse = " * "), sep = ""))
     lm_output <- lm(formula, data = mean_data)
     car_results <- car::Anova(lm_output, type = type)
-    # 计算效应量
-    # eta_sq <- car::Anova(lm_output, type = type)$'EtaSq'
-    # car_results_with_eta_sq <- cbind(car_results, 'EtaSq' = eta_sq)
 
     ### 方法2 使用 rstarix 进行方差分析
     mean_data %>%
@@ -53,8 +50,8 @@ calc_within_anova <- function(input_data,
             dv = mean_rt, wid = within, # nolint
             within = factors,
             type = type
-        ) %>%
-        get_anova_table() -> rstatix_results
+        ) -> rstatix_anova
+    get_anova_table(rstatix_anova) -> rstatix_results
 
     # 进行事后检验
     post_hoc <- tukey_hsd(mean_data, formula)
@@ -75,6 +72,16 @@ calc_within_anova <- function(input_data,
             within = .(!!!rlang::syms(factors)),
             detailed = TRUE
         )))
+    }
+
+    if (print_desc_report) {
+        cat("\033[31m=== Descibtion ===\033[39m\n")
+        input_data %>%
+            group_by(dplyr::across(all_of(factors))) %>%
+            report::report() %>%
+            summary() %>%
+            print()
+        cat("\033[31m=== End Report ===\033[39m\n")
     }
 
     if (generate_report) {

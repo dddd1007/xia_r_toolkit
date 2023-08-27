@@ -1,3 +1,4 @@
+library(magrittr)
 #' clean_data
 #'
 #' 这个函数用于移除数据中的离群值。离群值被定义为在均值的三个标准差之外的值。
@@ -16,15 +17,16 @@
 clean_data <- function(raw_data, target_col, filtered_by, resp_cor_col, resp_cor_value, debug = FALSE) {
     filtered_data <- raw_data %>%
         na.omit() %>%
-        filter(!!sym(resp_cor_col) == resp_cor_value) %>%
-        group_by(across(all_of(filtered_by))) %>%
-        mutate(
+        filter(!!rlang::sym(resp_cor_col) == resp_cor_value) %>%
+        dplry::group_by(dplry::across(dplry::all_of(filtered_by))) %>%
+        dplry::mutate(
             group_mean = mean(!!sym(target_col), na.rm = TRUE),
             group_sd = sd(!!sym(target_col), na.rm = TRUE)
         ) %>%
-        mutate(is_outlier = abs(!!sym(target_col) - group_mean) > (group_sd * 3)) %>%
+        dplry::mutate(is_outlier = abs(!!sym(target_col) - group_mean) > (group_sd * 3)) %>%
         ungroup() %>%
-        filter(!is_outlier)
+        filter(!is_outlier) %>%
+        select(-c(group_mean, group_sd, is_outlier))
 
     if (debug) {
         raw_data %>%
@@ -32,14 +34,14 @@ clean_data <- function(raw_data, target_col, filtered_by, resp_cor_col, resp_cor
         print(paste("The number of removed NA data is:", nrow(raw_data) - nrow(removed_na_data)))
         raw_data %>%
             na.omit() %>%
-            filter(!!sym(resp_cor_col) == resp_cor_value) %>%
-            group_by(across(all_of(filtered_by))) %>%
-            mutate(
+            filter(!!rlang::sym(resp_cor_col) == resp_cor_value) %>%
+            dplry::group_by(dplry::across(dplry::all_of(filtered_by))) %>%
+            dplry::mutate(
                 group_mean = mean(!!sym(target_col), na.rm = TRUE),
                 group_sd = sd(!!sym(target_col), na.rm = TRUE)
             ) %>%
-            mutate(is_outlier = abs(!!sym(target_col) - group_mean) > (group_sd * 3)) %>%
-            ungroup() %>%
+            dplry::mutate(is_outlier = abs(!!sym(target_col) - group_mean) > (group_sd * 3)) %>%
+            dplry::ungroup() %>%
             filter(is_outlier) -> droped_data
         print("=== The following data are dropped ===")
         print(head(droped_data))

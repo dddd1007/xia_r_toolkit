@@ -14,7 +14,7 @@ delta_plot(
   inc_value = "inc",
   factors_col,
   n_bins,
-  remove_outlier = TRUE
+  debug = FALSE
 )
 }
 \arguments{

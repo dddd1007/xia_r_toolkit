@@ -9,9 +9,10 @@ calc_within_anova(
   within = "subject_num",
   factors,
   dep = "RT",
-  type = 2,
+  type = 3,
   generate_report = FALSE,
   report_path = NULL,
+  print_desc_report = TRUE,
   debug = FALSE
 )
 }
