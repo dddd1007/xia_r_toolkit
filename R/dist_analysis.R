@@ -68,7 +68,7 @@ delta_plot <- function(input_data, subject_col, congruency_col, rt_col,
         ggplot2::geom_path(size = 1.5) +
         ggplot2::facet_grid(cols = vars(!!sym(facet_by))) +
         ggplot2::ylab("Simon 效应（ms）") +
-        ggplot2::xlab("RT 分位数") +
+        ggplot2::xlab("反应时分位数") +
         ggplot2::scale_x_continuous(breaks = 1:n_bins) +
         ggplot2::scale_color_discrete(name = "一致性比例") +
         ggpubr::theme_pubr() +
@@ -85,8 +85,27 @@ delta_plot <- function(input_data, subject_col, congruency_col, rt_col,
     ))
 }
 
-# 创建一个函数来计算重复测量ANOVA和事后检验
-rt_dist_anova_and_ttest <- function(simon_effect_data, subject_col, factors_col, print_result = TRUE) {
+#' rt_dist_anova_and_ttest
+#'
+#' 计算重复测量ANOVA和事后检验
+#'
+#' @param simon_effect_data Simon效应数据，应为一个数据框
+#' @param subject_col 被试列名
+#' @param factors_col 因子列名，应为一个字符向量
+#' @param print_result 是否打印结果，默认为 TRUE
+#' @return 返回一个列表，包含ANOVA结果，描述统计结果和t检验结果
+#' @export
+#' @examples
+#' # 假设我们有一个名为 simon_effect_data 的数据框，其中包含因子 "subject_num" 和 "condition"
+#' rt_dist_anova_and_ttest(simon_effect_data,
+#'     subject_col = "subject_num",
+#'     factors_col = c("condition"), print_result = TRUE
+#' )
+rt_dist_anova_and_ttest <- function(simon_effect_data,
+                                    subject_col,
+                                    factors_col,
+                                    facet_col,
+                                    print_result = TRUE) {
     simon_effect_data %>%
         group_by(!!!syms(factors_col), bin_num) %>%
         get_summary_stats(simon_effect, type = "mean_sd") -> all_factor_summary
@@ -112,16 +131,16 @@ rt_dist_anova_and_ttest <- function(simon_effect_data, subject_col, factors_col,
     # 进行事后检验
     # Simple two-way interaction
     simon_effect_data %>%
-        group_by(bin_num, condition) %>%
-        anova_test(dv = simon_effect, wid = subject_num, within = prop) -> between_prop
+        group_by(bin_num, !!sym(facet_col)) %>%
+        anova_test(dv = simon_effect, wid = !!sym(subject_col), within = prop) -> between_prop
     simon_effect_data %>%
-        group_by(condition) %>%
-        anova_test(dv = simon_effect, wid = subject_num, within = c(bin_num, prop)) -> between_prop_bin
+        group_by(!!sym(facet_col)) %>%
+        anova_test(dv = simon_effect, wid = !!sym(subject_col), within = c(bin_num, prop)) -> between_prop_bin
     simon_effect_data %>%
-        group_by(prop, condition) %>%
+        group_by(prop, !!sym(facet_col)) %>%
         anova_test(
             dv = simon_effect,
-            wid = subject_num,
+            wid = !!sym(subject_col),
             within = bin_num
         ) %>%
         get_anova_table() -> between_bin
@@ -151,7 +170,11 @@ rt_dist_anova_and_ttest <- function(simon_effect_data, subject_col, factors_col,
         format_line <- function(text, total_length, color_code = "32") {
             chinese_count <- count_chinese(text)
             side_length <- (total_length - nchar(text) - 2 - chinese_count) %/% 2
-            line <- paste0(paste0("\033[", color_code, "m"), strrep("=", side_length), " ", text, " ", strrep("=", side_length), "\033[39m\n")
+            line <- paste0(
+                paste0("\033[", color_code, "m"),
+                strrep("=", side_length), " ", text, " ",
+                strrep("=", side_length), "\033[39m\n"
+            )
             return(line)
         }
 
@@ -184,7 +207,10 @@ rt_dist_anova_and_ttest <- function(simon_effect_data, subject_col, factors_col,
 
     return(list(
         anova_results = anova_add_volatility_results,
-        desc_stats = list(all_factor_summary = all_factor_summary, prop_delta = prop_delta, mean_prop_delta = mean_prop_delta),
+        desc_stats = list(
+            all_factor_summary = all_factor_summary,
+            prop_delta = prop_delta, mean_prop_delta = mean_prop_delta
+        ),
         ttest_results = ttest_results
     ))
 }

@@ -28,6 +28,9 @@ calc_within_anova <- function(input_data,
                               print_desc_report = TRUE,
                               debug = FALSE) {
     grouping_columns <- c(within, factors)
+    if (debug) {
+        print(head(input_data))
+    }
 
     ### 方法1 使用car包进行分析
     # 按照指定的分组计算均值
@@ -46,47 +49,47 @@ calc_within_anova <- function(input_data,
 
     ### 方法2 使用 rstarix 进行方差分析
     mean_data %>%
-        anova_test(
+        rstatix::anova_test(
             dv = mean_rt, wid = within, # nolint
             within = factors,
             type = type
         ) -> rstatix_anova
-    get_anova_table(rstatix_anova) -> rstatix_results
+    rstatix::get_anova_table(rstatix_anova) -> rstatix_results
 
     # 进行事后检验
     post_hoc <- tukey_hsd(mean_data, formula)
 
     ### 方法3 使用 ezANOVA
-    if (debug) {
-        print(head(input_data))
-    }
-
-    if (sum(colnames(input_data) == dep) == 0 &
+    if (sum(colnames(input_data) == dep) == 0 ||
         sum(factors %in% colnames(input_data)) != length(factors)) {
         stop("dep or factors is not in input_data")
     } else {
+        # Use ez::ezANOVA to calculate ANOVA and get partial eta square
         ez_results <- rlang::eval_tidy(rlang::expr(ez::ezANOVA(
             data = input_data,
             dv = .(!!sym(dep)),
             wid = .(!!sym(within)),
             within = .(!!!rlang::syms(factors)),
-            detailed = TRUE
+            detailed = TRUE,
+            type = type
         )))
+        # Extract partial eta square from ez_results
+        ez_results$ANOVA$"partial_eta_square" <- ez_results$ANOVA$SSn / (ez_results$ANOVA$SSn + ez_results$ANOVA$SSd)
     }
 
     if (print_desc_report) {
-        cat("\033[31m=== Descibtion ===\033[39m\n")
-        input_data %>%
+        cat("\033[31m=== 开始报告统计结果 ===\033[39m\n")
+        cat("\033[34m=== 数据描述统计 :\033[39m\n")
+        mean_data %>%
             group_by(dplyr::across(all_of(factors))) %>%
-            report::report() %>%
-            summary() %>%
+            summarise(mean_rt = mean(mean_rt)) %>%
             print()
-        cat("\033[31m=== End Report ===\033[39m\n")
+        cat("\033[31m=== 统计报告结束 ===\033[39m\n")
     }
 
     if (generate_report) {
-        apaTables::apa.aov.table(lm_output, filename = paste0(report_path, "/anova_table.doc"))
-        apaTables::apa.ezANOVA.table(ez_results, filename = paste0(report_path, "/ezANOVA_table.doc"))
+        apaTables::apa.aov.table(lm_output, filename = paste0(report_path, "/", dep, "_anova_table.doc"))
+        apaTables::apa.ezANOVA.table(ez_results, filename = paste0(report_path, "/", dep, "_ezANOVA_table.doc"))
         print(paste("The anova report are saved to", getwd()))
     }
 
@@ -96,60 +99,4 @@ calc_within_anova <- function(input_data,
         "ez_results" = ez_results,
         "post_hoc" = post_hoc
     ))
-}
-
-#' pc_simon_plot
-#'
-#' 这个函数用于绘制 Simon 任务的反应时间数据的条形图。
-#'
-#' @param raw_data 原始数据，应为一个数据框
-#' @param dep_var 依赖变量，应为一个字符串，表示数据框中的一列
-#' @param factors 因子，应为一个字符向量，表示数据框中的多列
-#' @return 返回一个 ggplot 对象，表示绘制的条形图
-#' @export
-#' @examples
-#' # 假设我们有一个名为 df 的数据框，其中包含因子 "subject_num"、"condition" 和 "trial"，以及依赖变量 "RT"
-#' pc_simon_plot(df, dep_var = "RT", factors = c("subject_num", "condition", "trial"))
-pc_simon_plot <- function(input_data, dep_var, factors,
-                          facet_by = "condition",
-                          color_by = "congruency",
-                          ylim,
-                          debug = FALSE) {
-    library(tidyr)
-
-    anova_table <- input_data %>%
-        group_by(!!!syms(factors)) %>%
-        dplyr::summarise(mean_dep_var = mean(!!sym(dep_var))) %>%
-        as_tibble()
-
-    data_forplot <- unite(anova_table,
-        col = "combined_factor",
-        !!!syms(setdiff(factors, facet_by)), sep = "/", remove = FALSE
-    )
-
-    data_forplot$combined_factor <- as.factor(data_forplot$combined_factor)
-
-    if (debug) {
-        # 将 tibble data_forplot 转换为 dataframe
-        data_forplot <- as.data.frame(data_forplot)
-        print(data_forplot)
-    }
-
-    anova_plot_bar <- ggplot(data_forplot, aes(x = combined_factor, y = mean_dep_var, fill = !!sym(color_by))) + # nolint
-        geom_bar(stat = "identity", position = "dodge") +
-        facet_grid(paste0(". ~ ", facet_by)) +
-        geom_errorbar(
-            aes(
-                ymin = mean_dep_var - sd(mean_dep_var),
-                ymax = mean_dep_var + sd(mean_dep_var)
-            ),
-            width = 0.2,
-            color = "black"
-        ) +
-        labs(y = paste0(dep_var, " (ms)")) +
-        ggpubr::theme_pubr() +
-        theme(text = element_text(size = 14)) +
-        coord_cartesian(ylim = ylim)
-
-    return(anova_plot_bar)
 }

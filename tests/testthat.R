@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(xiaRToolkit)
+library(xia_beh_analysis)
 
-test_check("xiaRToolkit")
+test_check("xia_beh_analysis")
