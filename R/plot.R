@@ -13,7 +13,7 @@
 pc_simon_plot <- function(input_data, dep_var, factors,
                           facet_by = "condition",
                           color_by = "congruency",
-                          ylim,
+                          ylim, debug = FALSE,
                           print_desc = TRUE) {
     library(tidyr)
     anova_table <- input_data %>%
@@ -25,6 +25,10 @@ pc_simon_plot <- function(input_data, dep_var, factors,
         col = "combined_factor",
         !!!syms(setdiff(factors, facet_by)), sep = "/", remove = FALSE
     )
+
+    if (debug) {
+        print(anova_table)
+    }
 
     data_forplot$combined_factor <- as.factor(data_forplot$combined_factor)
 
@@ -54,6 +58,6 @@ pc_simon_plot <- function(input_data, dep_var, factors,
         ggpubr::theme_pubr() +
         theme(text = element_text(size = 14)) +
         coord_cartesian(ylim = ylim)
-    
+
     return(anova_plot_bar)
 }

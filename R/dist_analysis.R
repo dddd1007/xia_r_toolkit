@@ -125,7 +125,8 @@ rt_dist_anova_and_ttest <- function(simon_effect_data,
         anova_test(
             dv = simon_effect,
             wid = !!sym(subject_col),
-            within = c(all_of(factors_col), "bin_num")
+            within = c(all_of(factors_col), "bin_num"),
+            effect.size = "pes",
         )
 
     # 进行事后检验

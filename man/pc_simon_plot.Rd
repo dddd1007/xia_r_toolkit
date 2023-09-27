@@ -11,6 +11,7 @@ pc_simon_plot(
   facet_by = "condition",
   color_by = "congruency",
   ylim,
+  debug = FALSE,
   print_desc = TRUE
 )
 }

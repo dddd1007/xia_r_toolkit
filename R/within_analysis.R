@@ -52,7 +52,8 @@ calc_within_anova <- function(input_data,
         rstatix::anova_test(
             dv = mean_rt, wid = within, # nolint
             within = factors,
-            type = type
+            type = type,
+            effect.size = "pes"
         ) -> rstatix_anova
     rstatix::get_anova_table(rstatix_anova) -> rstatix_results
 
@@ -89,7 +90,7 @@ calc_within_anova <- function(input_data,
 
     if (generate_report) {
         apaTables::apa.aov.table(lm_output, filename = paste0(report_path, "/", dep, "_anova_table.doc"))
-        apaTables::apa.ezANOVA.table(ez_results, filename = paste0(report_path, "/", dep, "_ezANOVA_table.doc"))
+        write.csv(ez_results$ANOVA, paste0(report_path, "/", dep, "_ezANOVA_table.csv"))
         print(paste("The anova report are saved to", getwd()))
     }
 
